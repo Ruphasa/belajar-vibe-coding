@@ -8,6 +8,20 @@
       "when": 1782875761745,
       "tag": "0000_curly_captain_flint",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1782876921497,
+      "tag": "0001_flashy_bromley",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1782876962833,
+      "tag": "0002_cute_hulk",
+      "breakpoints": true
     }
   ]
 }
