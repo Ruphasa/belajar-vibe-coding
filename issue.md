@@ -1,9 +1,9 @@
-# Feature: Get Users (Protected Route)
+# Feature: User Logout
 
 ## API Endpoint
-Implement an API to fetch a list of users. This endpoint must be protected and requires a valid session token.
+Implement an API to log out a user. This endpoint requires a valid session token, which will be deleted from the database upon a successful logout.
 
-**Endpoint:** `GET /api/users`
+**Endpoint:** `DELETE /api/logout`
 
 **Headers:**
 - `Authorization`: `Bearer <token>`
@@ -11,37 +11,31 @@ Implement an API to fetch a list of users. This endpoint must be protected and r
 **Response (Success - 200 OK):**
 ```json
 {
-    "message": "Login successful",
-    "data": [
-        {
-            "id": 1,
-            "name": "Rizqi Fauzan",
-            "email": "rizqifauzan@gmail.com"
-        }
-    ]
+    "message": "Logout successful"
 }
 ```
 
 **Response (Error - 401 Unauthorized):**
 ```json
 {
-    "message": "unauthorized"
+    "message": "Unauthorized"
 }
 ```
 
 ## Folder & File Structure
 Continue using our layered architecture inside the `src` folder:
-- `src/routes/user-routes.ts`: Add the new endpoint here.
-- `src/services/user-services.ts`: Add the business logic for fetching users and verifying the token.
+- `src/routes/user-routes.ts`: Add the new logout endpoint here.
+- `src/services/user-services.ts`: Add the business logic for deleting the session token.
 
 ## Implementation Notes for Programmer
 1. **Middleware / Token Verification**:
    - Extract the `Authorization` header (`Bearer <token>`).
-   - Query the `sessions` table in the database to ensure the token exists and is valid.
-   - If the token is invalid or missing, immediately return a `401 Unauthorized` response with the message `unauthorized`.
+   - If the header is missing or improperly formatted, return a `401 Unauthorized` response with the message `"Unauthorized"`.
 2. **Service Logic (`user-services.ts`)**:
-   - Create a function (e.g., `getUsers()`) that queries the `users` table.
-   - Select only the `id`, `name`, and `email` fields (exclude passwords or timestamps if not needed).
+   - Create a function (e.g., `logoutUser(token: string)`) that receives the token.
+   - Execute a `DELETE` query on the `sessions` table where the `token` matches the provided token.
+   - If the deletion affects 0 rows (meaning the token didn't exist in the database), throw an error to return a `401 Unauthorized`.
 3. **Route Setup (`user-routes.ts`)**:
-   - Update the existing `GET /api/users` (or create it if it doesn't exist) to include the authorization check.
-   - If authorized, call the service to fetch users and format the response to match the success JSON structure above.
+   - Add the `DELETE /logout` endpoint.
+   - If the token is successfully deleted via the service, return the `200 OK` response with `"Logout successful"`.
+   - If an error is caught (e.g., invalid token), return `401 Unauthorized`.
