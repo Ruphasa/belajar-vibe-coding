@@ -1,18 +1,7 @@
 import { Elysia, t } from "elysia";
 import { registerUser, loginUser, getUsers, logoutUser } from "../services/user-services";
 
-const authPlugin = new Elysia({ name: "auth-plugin" })
-  .derive(({ headers }) => {
-    const authHeader = headers.authorization;
-    return { token: authHeader ? authHeader.split(" ")[1] : "" };
-  })
-  .onBeforeHandle(({ headers, set }) => {
-    const authHeader = headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      set.status = 401;
-      return { message: "unauthorized" };
-    }
-  });
+
 
 export const userRoutes = new Elysia({ prefix: "/api" })
   .post("/users", async ({ body, set }) => {
@@ -21,10 +10,11 @@ export const userRoutes = new Elysia({ prefix: "/api" })
       set.status = 201;
       return { message: "User created successfully" };
     } catch (error: any) {
-      if (error.code === "ER_DUP_ENTRY") {
+      if (error?.message === "User already exists" || error?.code === "ER_DUP_ENTRY" || error?.message?.includes("Duplicate entry") || (error?.cause && error.cause.code === "ER_DUP_ENTRY")) {
         set.status = 409;
         return { message: "User already exists" };
       }
+      console.error("DB Error:", error);
       set.status = 500;
       return { message: "Internal server error" };
     }
@@ -51,7 +41,17 @@ export const userRoutes = new Elysia({ prefix: "/api" })
     })
   })
   .group("", (app) => app
-    .use(authPlugin)
+    .derive(({ headers }) => {
+      const authHeader = headers.authorization;
+      return { token: authHeader ? authHeader.split(" ")[1] : "" };
+    })
+    .onBeforeHandle(({ headers, set }) => {
+      const authHeader = headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        set.status = 401;
+        return { message: "unauthorized" };
+      }
+    })
     .get("/users", async ({ token, set }) => {
       try {
         const data = await getUsers(token);
