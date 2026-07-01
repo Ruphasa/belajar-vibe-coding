@@ -1,6 +1,19 @@
 import { Elysia, t } from "elysia";
 import { registerUser, loginUser, getUsers, logoutUser } from "../services/user-services";
 
+const authPlugin = new Elysia({ name: "auth-plugin" })
+  .derive(({ headers }) => {
+    const authHeader = headers.authorization;
+    return { token: authHeader ? authHeader.split(" ")[1] : "" };
+  })
+  .onBeforeHandle(({ headers, set }) => {
+    const authHeader = headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      set.status = 401;
+      return { message: "unauthorized" };
+    }
+  });
+
 export const userRoutes = new Elysia({ prefix: "/api" })
   .post("/users", async ({ body, set }) => {
     try {
@@ -12,14 +25,14 @@ export const userRoutes = new Elysia({ prefix: "/api" })
         set.status = 409;
         return { message: "User already exists" };
       }
-      set.status = 400;
-      return { message: error.message || "An error occurred" };
+      set.status = 500;
+      return { message: "Internal server error" };
     }
   }, {
     body: t.Object({
-      name: t.String(),
-      email: t.String(),
-      password: t.String()
+      name: t.String({ maxLength: 255 }),
+      email: t.String({ format: "email", maxLength: 255 }),
+      password: t.String({ minLength: 8, maxLength: 255 })
     })
   })
   .post("/login", async ({ body, set }) => {
@@ -33,22 +46,12 @@ export const userRoutes = new Elysia({ prefix: "/api" })
     }
   }, {
     body: t.Object({
-      email: t.String(),
-      password: t.String()
+      email: t.String({ format: "email", maxLength: 255 }),
+      password: t.String({ maxLength: 255 })
     })
   })
   .group("", (app) => app
-    .derive(({ headers }) => {
-      const authHeader = headers.authorization;
-      return { token: authHeader ? authHeader.split(" ")[1] : "" };
-    })
-    .onBeforeHandle(({ headers, set }) => {
-      const authHeader = headers.authorization;
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        set.status = 401;
-        return { message: "unauthorized" };
-      }
-    })
+    .use(authPlugin)
     .get("/users", async ({ token, set }) => {
       try {
         const data = await getUsers(token);
