@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { registerUser, loginUser, getUsers } from "../services/user-services";
+import { registerUser, loginUser, getUsers, logoutUser } from "../services/user-services";
 
 export const userRoutes = new Elysia({ prefix: "/api" })
   .post("/users", async ({ body, set }) => {
@@ -8,11 +8,11 @@ export const userRoutes = new Elysia({ prefix: "/api" })
       set.status = 201;
       return { message: "User created successfully" };
     } catch (error: any) {
-      if (error.message === "User already exists") {
+      if (error.code === "ER_DUP_ENTRY") {
         set.status = 409;
-      } else {
-        set.status = 400;
+        return { message: "User already exists" };
       }
+      set.status = 400;
       return { message: error.message || "An error occurred" };
     }
   }, {
@@ -37,18 +37,36 @@ export const userRoutes = new Elysia({ prefix: "/api" })
       password: t.String()
     })
   })
-  .get("/users", async ({ headers, set }) => {
-    try {
+  .group("", (app) => app
+    .derive(({ headers }) => {
+      const authHeader = headers.authorization;
+      return { token: authHeader ? authHeader.split(" ")[1] : "" };
+    })
+    .onBeforeHandle(({ headers, set }) => {
       const authHeader = headers.authorization;
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        throw new Error("unauthorized");
+        set.status = 401;
+        return { message: "unauthorized" };
       }
-      const token = authHeader.split(" ")[1];
-      const data = await getUsers(token);
-      set.status = 200;
-      return { message: "Login successful", data };
-    } catch (error: any) {
-      set.status = 401;
-      return { message: "unauthorized" };
-    }
-  });
+    })
+    .get("/users", async ({ token, set }) => {
+      try {
+        const data = await getUsers(token);
+        set.status = 200;
+        return { message: "Login successful", data };
+      } catch (error) {
+        set.status = 401;
+        return { message: "unauthorized" };
+      }
+    })
+    .delete("/logout", async ({ token, set }) => {
+      try {
+        await logoutUser(token);
+        set.status = 200;
+        return { message: "Logout successful" };
+      } catch (error) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+    })
+  );
