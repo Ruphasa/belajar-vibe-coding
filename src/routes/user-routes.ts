@@ -28,7 +28,12 @@ export const userRoutes = new Elysia({ prefix: "/api" })
       name: t.String({ maxLength: 255 }),
       email: t.String({ format: "email", maxLength: 255 }),
       password: t.String({ minLength: 8, maxLength: 255 })
-    })
+    }),
+    response: {
+      201: t.Object({ message: t.String() }),
+      409: t.Object({ message: t.String() }),
+      500: t.Object({ message: t.String() })
+    }
   })
   .post("/login", async ({ body, set }) => {
     try {
@@ -48,7 +53,11 @@ export const userRoutes = new Elysia({ prefix: "/api" })
     body: t.Object({
       email: t.String({ format: "email", maxLength: 255 }),
       password: t.String({ maxLength: 255 })
-    })
+    }),
+    response: {
+      200: t.Object({ message: t.String(), token: t.String() }),
+      404: t.Object({ message: t.String() })
+    }
   })
   .group("", (app) => app
     .derive(({ headers }) => {
@@ -79,7 +88,21 @@ export const userRoutes = new Elysia({ prefix: "/api" })
       },
       headers: t.Object({
         authorization: t.Optional(t.String({ description: "Masukkan token: Bearer <token>" }))
-      })
+      }),
+      response: {
+        200: t.Object({
+          message: t.String(),
+          data: t.Array(
+            t.Object({
+              id: t.Number(),
+              name: t.String(),
+              email: t.String(),
+              createdAt: t.Any()
+            })
+          )
+        }),
+        401: t.Object({ message: t.String() })
+      }
     })
     .delete("/logout", async ({ token, set }) => {
       try {
@@ -98,6 +121,10 @@ export const userRoutes = new Elysia({ prefix: "/api" })
       },
       headers: t.Object({
         authorization: t.Optional(t.String({ description: "Masukkan token: Bearer <token>" }))
-      })
+      }),
+      response: {
+        200: t.Object({ message: t.String() }),
+        401: t.Object({ message: t.String() })
+      }
     })
   );
