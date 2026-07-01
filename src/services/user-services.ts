@@ -45,3 +45,20 @@ export async function loginUser(data: any) {
 
   return token;
 }
+
+export async function getUsers(token: string) {
+  // Check token in sessions
+  const sessionList = await db.select().from(sessions).where(eq(sessions.token, token)).limit(1);
+  if (sessionList.length === 0) {
+    throw new Error("unauthorized");
+  }
+
+  // Fetch users with limited fields
+  const allUsers = await db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+  }).from(users);
+
+  return allUsers;
+}
