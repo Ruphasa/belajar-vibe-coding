@@ -1,8 +1,8 @@
 import { Elysia, t } from "elysia";
-import { registerUser } from "../services/user-services";
+import { registerUser, loginUser } from "../services/user-services";
 
-export const userRoutes = new Elysia({ prefix: "/api/users" })
-  .post("/", async ({ body, set }) => {
+export const userRoutes = new Elysia({ prefix: "/api" })
+  .post("/users", async ({ body, set }) => {
     try {
       await registerUser(body);
       set.status = 201;
@@ -18,6 +18,21 @@ export const userRoutes = new Elysia({ prefix: "/api/users" })
   }, {
     body: t.Object({
       name: t.String(),
+      email: t.String(),
+      password: t.String()
+    })
+  })
+  .post("/login", async ({ body, set }) => {
+    try {
+      const token = await loginUser(body);
+      set.status = 200;
+      return { message: "Login successful", token };
+    } catch (error: any) {
+      set.status = 404; // User not found
+      return { message: "User not found" };
+    }
+  }, {
+    body: t.Object({
       email: t.String(),
       password: t.String()
     })

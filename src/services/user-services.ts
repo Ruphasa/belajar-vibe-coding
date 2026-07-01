@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { users } from "../db/schema";
+import { users, sessions } from "../db/schema";
 import { eq } from "drizzle-orm";
 
 export async function registerUser(data: any) {
@@ -18,4 +18,30 @@ export async function registerUser(data: any) {
     email: data.email,
     password: hashedPassword,
   });
+}
+
+export async function loginUser(data: any) {
+  // Check if user exists
+  const userList = await db.select().from(users).where(eq(users.email, data.email)).limit(1);
+  if (userList.length === 0) {
+    throw new Error("User not found");
+  }
+  const user = userList[0];
+
+  // Verify password
+  const isMatch = await Bun.password.verify(data.password, user.password);
+  if (!isMatch) {
+    throw new Error("User not found");
+  }
+
+  // Generate a simple token (UUID)
+  const token = crypto.randomUUID();
+
+  // Insert session
+  await db.insert(sessions).values({
+    token,
+    userId: user.id,
+  });
+
+  return token;
 }
